@@ -65,7 +65,7 @@ J = 40
 z_min = μ_z*0.8
 z_max = μ_z*1.2
 z = linspace(z_min, z_max, J)
-dz = (z_max-z_min)/(I-1)
+dz = (z_max-z_min)/(J-1)
 dz_sq = dz^2
 
 
@@ -104,23 +104,18 @@ Vaf, Vab, Vzf, Vzb, Vzz, c = [zeros(I,J) for i in 1:6]
 
 
 ==============================================================================#
- yy = (-Σ_sq/dz_sq - μ/dz_sq)
 
+ yy = (-Σ_sq/dz_sq - μ/dz)
+ χ = Σ_sq/(2*dz_sq) # Last term of KFE
+ ζ = μ/dz + Σ_sq/(2*dz_sq)
 
- ζ = -μ/dz + Σ_sq/(2*dz_sq)
-
-  χ = Σ_sq/(2*dz_sq) # Last term of KFE
-
- x_u = [i for i in 1:I*(J+1)]
- x_c=[i for i in 1:I*J]
- x_l = [i for i in 1:(I*(J-3))]
 
  # Define the diagonals of this matrix
  updiag = zeros(I,1)
  	for j = 1:J
 		updiag =[updiag; repmat([ζ[j]], I, 1)]
 	end
- updiag =[(updiag, x_u)]
+ updiag =(updiag[:])
 
 
  centerdiag=repmat([χ[1]+yy[1]],I,1)
@@ -128,12 +123,17 @@ Vaf, Vab, Vzf, Vzb, Vzz, c = [zeros(I,J) for i in 1:6]
 		centerdiag = [centerdiag; repmat([yy[j]], I, 1)]
 	end
  centerdiag=[centerdiag; repmat([yy[J]+ζ[J]], I, 1)]
- centerdiag = [(centerdiag,x_c)]
+ centerdiag = centerdiag[:]
 
 lowdiag = repmat([χ[2]], I, 1)
-	for j=3:J-2
+	for j=3:J
 		lowdiag = [lowdiag; repmat([χ[j]],I,1)]
 	end
-	lowdiag = [(lowdiag, x_l)]
+lowdiag=lowdiag[:]
 
-B_switch = spdiagm(centerdiag, 0, I*J, I*J) #+ spdiagm(lowdiag, 0, I*J, I*J) + spdiagm(updiag, 0, I*J, I)
+# spdiags in Matlab allows for automatic trimming
+    # spdiagm does not do this
+
+B_switch = spdiagm(centerdiag)
+    + [spdiagm(lowdiag) zeros(I*(J-1), I); zeros(I,I*J)]
+    + spdiagm(updiag)[(I+1):end,(I+1):end]
