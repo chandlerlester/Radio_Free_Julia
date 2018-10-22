@@ -77,8 +77,9 @@ plot(z,y, grid=false,
 		legend=false, color="purple", title="PDF of z")
 
 #create matrices for k and z
+z= convert(Array, z)'
 kk = k*ones(1,J)
-zz = ones(I,1)*z'
+zz = ones(I,1)*z
 
 # use Ito's lemma to find the drift and variance of our optimization equation
 
@@ -134,44 +135,45 @@ lowdiag=lowdiag[:]
 # spdiags in Matlab allows for automatic trimming/adding of zeros
     # spdiagm does not do this
 
-B_switch = spdiagm(centerdiag)
-    + [spdiagm(lowdiag) zeros(I*(J-1), I); zeros(I,I*J)] # add rows
-    + spdiagm(updiag)[(I+1):end,(I+1):end] # trim off rows of zeros
+B_switch = spdiagm(centerdiag)+ [zeros(I,I*J);  spdiagm(lowdiag) zeros(I*(J-1), I)]+ spdiagm(updiag)[(I+1):end,1:(I*J)] # trim off rows of zeros
 
 
 # Now it's time to solve the model, first put in a guess
 
-v0 = ((zz.*kk.^α).^(1-γ))/((1-γ)/ρ)
+v0 = (zz.*kk.^α).^(1-γ)/(1-γ)/ρ
 v=v0
 
 maxit= 30 #set number of iterations
 
-for n = 1:maxit
 
+AA = zeros(I*J,I*J)
+A = zeros(I*J,I*J)
+dist = []
+
+for n = 1:maxit
+    println(n)
     V=v
 
     #Now set up the forward difference
 
     Vaf[1:I-1,:] = (V[2:I, :] - V[1:I-1,:])/dk
-    Vaf[I] = ((z_max.*k_max.^α - δ.*k_max).^(-γ)) # imposes a constraint
+    Vaf[I,:] = (z.*k_max.^α - δ.*k_max).^(-γ) # imposes a constraint
 
     #backward difference
-
     Vab[2:I,:] = (V[2:I, :] - V[1:I-1,:])/dk
-    Vab[1,:] = ((z_min.*k_min.^α - δ.*k_min).^(-γ))
+    Vab[1,:] = (z.*k_min.^α - δ.*k_min).^(-γ)
 
     #I_concave = Vab .> Vaf # indicator for whether the value function is concave
 
     # Consumption and savings functions
-
     cf = Vaf.^(-1/γ)
     sf = zz .* kk.^α - δ.*kk - cf
 
     # consumption and saving backwards difference
 
-    cb = Vab.^(-1/γ)
+    cb = Vab.^(-1.0/γ)
     sb = zz .* kk.^α - δ.*kk - cb
-
+    #println(sb)
     #consumption and derivative of the value function at the steady state
 
     c0 = zz.*kk.^α - δ.*kk
@@ -179,8 +181,8 @@ for n = 1:maxit
 
     # df chooses between the forward or backward difference
 
-    If = sf.>zeros(100,40) # positive drift will ⇒ forward difference
-    Ib = sb.<zeros(100,40) # negative drift ⇒ backward difference
+    If = sf.>0 # positive drift will ⇒ forward difference
+    Ib = sb.<0 # negative drift ⇒ backward difference
     I0=(1-If-Ib) # at steady state
 
     Va_upwind = Vaf.*If + Vab.*Ib + Va0.*I0 # need to include SS term
@@ -190,17 +192,17 @@ for n = 1:maxit
 
     # Now to constuct the A matrix
 #======================================== Check min in Julia vs Matlab =====#
-    X = - min(sb, 0)/dk
-    Y = - max(sf, 0)/dk + min(sb, 0)/dk
+    X = -min(sb, 0)/dk
+    #println(X)
+    Y = -max(sf, 0)/dk + min(sb, 0)/dk
     Z = max(sf, 0)/dk
-    display(n)
+
     updiag = 0
        for j = 1:J
            updiag =[updiag; Z[1:I-1,j]; 0]
        end
     updiag =(updiag[:])
 
-#======================================== Check reshape in Julia vs Matlab =====#
     centerdiag=reshape(Y, I*J, 1)
     centerdiag = (centerdiag[:]) # for tuples
 
@@ -208,15 +210,12 @@ for n = 1:maxit
        for j = 2:J
            lowdiag = [lowdiag; 0; X[2:I,j]]
        end
-   lowdiag=(lowdiag[:])
+   lowdiag=(lowdiag)
 
    # spdiags in Matlab allows for automatic trimming/adding of zeros
        # spdiagm does not do this
-println(size(spdiagm(updiag)))
-#======================================== Check spdiags in Julia vs Matlab =====#
-   AA = spdiagm(centerdiag)
-       + spdiagm([lowdiag; 0]) # add zero
-       + spdiagm(updiag)[2:end, 2:end] # trim first element
+
+   AA = spdiagm(centerdiag)+ [zeros(1, I*J); spdiagm(lowdiag) zeros(I*J-1,1)] + spdiagm(updiag)[2:end, 1:(I*J)] # trim first element
 
   A = AA + B_switch
   B = (1/Δ + ρ)*speye(I*J) - A
@@ -224,7 +223,7 @@ println(size(spdiagm(updiag)))
   u_stacked= reshape(u, I*J, 1)
   V_stacked = reshape(V,I*J, 1)
 
-  b = u_stacked + V_stacked
+  b = u_stacked + (V_stacked./Δ)
 
   V_stacked = B\b
 
@@ -235,9 +234,9 @@ println(size(spdiagm(updiag)))
   v= V
 
 #======================================== Check growing vectors in julia =====#
-  dist=ones(6)
-   println(max(findmax(abs(V_change))))
-  dist[n]= max.(max.(abs(V_change)))
+
+   #println(max(findmax(abs(V_change),1)[1], 2))
+  push!(dist, findmax(abs(V_change))[1])
   if dist[n].< ε
       println("Value Function Converged Iteration=")
       println(n)
@@ -245,3 +244,12 @@ println(size(spdiagm(updiag)))
   end
 
 end
+
+
+ss = zz.*kk.^α - δ.*kk - c
+
+plot(k, ss, grid=false,
+		xlabel="k", ylabel="s(k,z)",
+        xlims=(k_min,k_max),
+		legend=false, title="Optimal Savings Policies")
+plot!(k, zeros(I,1))
