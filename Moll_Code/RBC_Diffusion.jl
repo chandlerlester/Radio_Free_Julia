@@ -106,7 +106,7 @@ Vaf, Vab, Vzf, Vzb, Vzz, c = [zeros(I,J) for i in 1:6]
 ==============================================================================#
 
  yy = (-Σ_sq/dz_sq - μ/dz)
- χ = Σ_sq/(2*dz_sq) # Last term of KFE
+ χ = Σ_sq/(2*dz_sq)
  ζ = μ/dz + Σ_sq/(2*dz_sq)
 
 
@@ -131,9 +131,117 @@ lowdiag = repmat([χ[2]], I, 1)
 	end
 lowdiag=lowdiag[:]
 
-# spdiags in Matlab allows for automatic trimming
+# spdiags in Matlab allows for automatic trimming/adding of zeros
     # spdiagm does not do this
 
 B_switch = spdiagm(centerdiag)
-    + [spdiagm(lowdiag) zeros(I*(J-1), I); zeros(I,I*J)]
-    + spdiagm(updiag)[(I+1):end,(I+1):end]
+    + [spdiagm(lowdiag) zeros(I*(J-1), I); zeros(I,I*J)] # add rows
+    + spdiagm(updiag)[(I+1):end,(I+1):end] # trim off rows of zeros
+
+
+# Now it's time to solve the model, first put in a guess
+
+v0 = ((zz.*kk.^α).^(1-γ))/((1-γ)/ρ)
+v=v0
+
+maxit= 30 #set number of iterations
+
+for n = 1:maxit
+
+    V=v
+
+    #Now set up the forward difference
+
+    Vaf[1:I-1,:] = (V[2:I, :] - V[1:I-1,:])/dk
+    Vaf[I] = ((z_max.*k_max.^α - δ.*k_max).^(-γ)) # imposes a constraint
+
+    #backward difference
+
+    Vab[2:I,:] = (V[2:I, :] - V[1:I-1,:])/dk
+    Vab[1,:] = ((z_min.*k_min.^α - δ.*k_min).^(-γ))
+
+    #I_concave = Vab .> Vaf # indicator for whether the value function is concave
+
+    # Consumption and savings functions
+
+    cf = Vaf.^(-1/γ)
+    sf = zz .* kk.^α - δ.*kk - cf
+
+    # consumption and saving backwards difference
+
+    cb = Vab.^(-1/γ)
+    sb = zz .* kk.^α - δ.*kk - cb
+
+    #consumption and derivative of the value function at the steady state
+
+    c0 = zz.*kk.^α - δ.*kk
+    Va0 = c0.^(-γ)
+
+    # df chooses between the forward or backward difference
+
+    If = sf.>zeros(100,40) # positive drift will ⇒ forward difference
+    Ib = sb.<zeros(100,40) # negative drift ⇒ backward difference
+    I0=(1-If-Ib) # at steady state
+
+    Va_upwind = Vaf.*If + Vab.*Ib + Va0.*I0 # need to include SS term
+
+    c = Va_upwind.^(-1/γ)
+    u = (c.^(1-γ))/(1-γ)
+
+    # Now to constuct the A matrix
+#======================================== Check min in Julia vs Matlab =====#
+    X = - min(sb, 0)/dk
+    Y = - max(sf, 0)/dk + min(sb, 0)/dk
+    Z = max(sf, 0)/dk
+    display(n)
+    updiag = 0
+       for j = 1:J
+           updiag =[updiag; Z[1:I-1,j]; 0]
+       end
+    updiag =(updiag[:])
+
+#======================================== Check reshape in Julia vs Matlab =====#
+    centerdiag=reshape(Y, I*J, 1)
+    centerdiag = (centerdiag[:]) # for tuples
+
+   lowdiag = X[2:I, 1]
+       for j = 2:J
+           lowdiag = [lowdiag; 0; X[2:I,j]]
+       end
+   lowdiag=(lowdiag[:])
+
+   # spdiags in Matlab allows for automatic trimming/adding of zeros
+       # spdiagm does not do this
+println(size(spdiagm(updiag)))
+#======================================== Check spdiags in Julia vs Matlab =====#
+   AA = spdiagm(centerdiag)
+       + spdiagm([lowdiag; 0]) # add zero
+       + spdiagm(updiag)[2:end, 2:end] # trim first element
+
+  A = AA + B_switch
+  B = (1/Δ + ρ)*speye(I*J) - A
+
+  u_stacked= reshape(u, I*J, 1)
+  V_stacked = reshape(V,I*J, 1)
+
+  b = u_stacked + V_stacked
+
+  V_stacked = B\b
+
+  V = reshape(V_stacked, I, J)
+
+  V_change = V-v
+
+  v= V
+
+#======================================== Check growing vectors in julia =====#
+  dist=ones(6)
+   println(max(findmax(abs(V_change))))
+  dist[n]= max.(max.(abs(V_change)))
+  if dist[n].< ε
+      println("Value Function Converged Iteration=")
+      println(n)
+      break
+  end
+
+end
