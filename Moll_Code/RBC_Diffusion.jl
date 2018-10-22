@@ -75,6 +75,7 @@ y = pdf.(LogNormal(0, var), z)
 plot(z,y, grid=false,
 		xlabel="z", ylabel="Probability",
 		legend=false, color="purple", title="PDF of z")
+png("PDF of z")
 
 #create matrices for k and z
 z= convert(Array, z)'
@@ -151,7 +152,6 @@ A = zeros(I*J,I*J)
 dist = []
 
 for n = 1:maxit
-    println(n)
     V=v
 
     #Now set up the forward difference
@@ -253,3 +253,5 @@ plot(k, ss, grid=false,
         xlims=(k_min,k_max),
 		legend=false, title="Optimal Savings Policies")
 plot!(k, zeros(I,1))
+
+png("OptimalSavings")
