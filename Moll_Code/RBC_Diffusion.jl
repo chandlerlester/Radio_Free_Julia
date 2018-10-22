@@ -98,12 +98,8 @@ Vaf, Vab, Vzf, Vzb, Vzz, c = [zeros(I,J) for i in 1:6]
 
     Now we are going to construct a matrix summarizing the evolution of z
 
-    We will do this using our Kolomogorov Forward Equation (KFE)
-        of the general form:
-
-        g(⋅)dt = -[s(k)g(⋅)]dk - [μ(⋅)g(⋅)]dz + 1/2 *(σ^2⋅g(⋅))dz^z
-
-
+    This matrix is the analog to the transition matrix for a
+        markov process
 
 ==============================================================================#
 
@@ -139,17 +135,12 @@ lowdiag=lowdiag[:]
 B_switch = spdiagm(centerdiag)+ [zeros(I,I*J);  spdiagm(lowdiag) zeros(I*(J-1), I)]+ spdiagm(updiag)[(I+1):end,1:(I*J)] # trim off rows of zeros
 
 
-# Now it's time to solve the model, first put in a guess
-
+# Now it's time to solve the model, first put in a guess for the value function
 v0 = (zz.*kk.^α).^(1-γ)/(1-γ)/ρ
 v=v0
 
-maxit= 30 #set number of iterations
-
-
-AA = zeros(I*J,I*J)
-A = zeros(I*J,I*J)
-dist = []
+maxit= 30 #set number of iterations (only need 6 to converge)
+dist = [] # set up empty array for the convergence criteria
 
 for n = 1:maxit
     V=v
@@ -191,7 +182,6 @@ for n = 1:maxit
     u = (c.^(1-γ))/(1-γ)
 
     # Now to constuct the A matrix
-#======================================== Check min in Julia vs Matlab =====#
     X = -min(sb, 0)/dk
     #println(X)
     Y = -max(sf, 0)/dk + min(sb, 0)/dk
@@ -214,8 +204,7 @@ for n = 1:maxit
 
    # spdiags in Matlab allows for automatic trimming/adding of zeros
        # spdiagm does not do this
-
-   AA = spdiagm(centerdiag)+ [zeros(1, I*J); spdiagm(lowdiag) zeros(I*J-1,1)] + spdiagm(updiag)[2:end, 1:(I*J)] # trim first element
+  AA = spdiagm(centerdiag)+ [zeros(1, I*J); spdiagm(lowdiag) zeros(I*J-1,1)] + spdiagm(updiag)[2:end, 1:(I*J)] # trim first element
 
   A = AA + B_switch
   B = (1/Δ + ρ)*speye(I*J) - A
@@ -233,9 +222,7 @@ for n = 1:maxit
 
   v= V
 
-#======================================== Check growing vectors in julia =====#
-
-   #println(max(findmax(abs(V_change),1)[1], 2))
+  # need push function to add to an already existing array
   push!(dist, findmax(abs(V_change))[1])
   if dist[n].< ε
       println("Value Function Converged Iteration=")
@@ -245,9 +232,10 @@ for n = 1:maxit
 
 end
 
-
+# calculate the savings for kk
 ss = zz.*kk.^α - δ.*kk - c
 
+# Plot the savings vs. k
 plot(k, ss, grid=false,
 		xlabel="k", ylabel="s(k,z)",
         xlims=(k_min,k_max),
