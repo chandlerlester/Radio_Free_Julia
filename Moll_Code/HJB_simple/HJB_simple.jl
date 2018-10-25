@@ -31,9 +31,7 @@ da = (a_max-a_min)/(I-1)
 maxit = 10000
 ε = 10e-6
 
-dVf = zeros(I,1)
-dVb = zeros(I,1)
-c = zeros(I,1)
+dVf, dVb, c = [zeros(I,1) for i =1:3] 
 
 #initial guess for V
 v0 = (w+r.*a).^(1-σ)/(1-σ)/ρ
@@ -103,6 +101,6 @@ s_approx = -ν*(a-a_min).^(1/2)
 plot(a, a_dot, grid=false,
 		xlabel="a", ylabel="s(a)",
 		xlims=(a_min,a_max), title="", label="s(a)", legend=:bottomleft)
-plot!(a, s_approx, label="Approximation of s(a)")
+plot!(a, s_approx, label="Approximation of s(a)", line=:dash)
 plot!(a, zeros(I,1), label="")
 png("stateconstraint")

@@ -28,10 +28,12 @@ a = linspace(a_min, a_max, I)
 a = convert(Array, a) # create grid for a values
 da = (a_max-a_min)/(I-1)
 
-maxit = 20000
+maxit = 10000
 ε = 10e-6
 
-dVf, dVb, c = [zeros(I,1) for i =1:3] 
+Δ = 1000
+
+dVf, dVb, c = [zeros(I,1) for i =1:3]
 
 #initial guess for V
 v0 = (w+r.*a).^(1-σ)/(1-σ)/ρ
@@ -53,11 +55,11 @@ for n=1:maxit
 
     # consumption and savings with forward difference
     cf = dVf.^(-1/σ)
-    μ_f = w+r.*a-cf
+    ssf = w+r.*a-cf
 
     # consumption and savings with backward difference
 	cb = dVb.^(-1/σ)
-	μ_b = w+r.*a-cb
+	ssb = w+r.*a-cb
 
     # consumption and savings at steady state
     c0=w+r.*a
@@ -65,19 +67,28 @@ for n=1:maxit
 
     #look at the sign of the drift
         #to choose forward or backward difference
-    If = μ_f .> 0 # positive drift ⇒ forward difference
-    Ib = μ_b .< 0  # negative drift ⇒ backward difference
+    If = ssf .> 0 # positive drift ⇒ forward difference
+    Ib = ssb .< 0  # negative drift ⇒ backward difference
     I0 = (1-If-Ib)
 
     dV_Upwind = dVf.*If + dVb.*Ib + dV0.*I0
 
      c = dV_Upwind.^(-1/σ)
-     V_change = c.^(1-σ)/(1-σ) + dV_Upwind.*(w + r.*a - c) - ρ.*V
+     u = c.^(1-σ)/(1-σ)
+
+     # create the transition matrix
+     X = -min(ssb,0)/da
+     Y = -max(ssf,0)/da + min(ssb,0)/da
+     Z = max(ssf,0)/da
 
 
-	# update
-	Δ = .9*da/(findmax(w + r.*a)[1])
-	v = v + Δ*V_change
+     A = spdiagm((Y[:])) + [zeros(1,I); spdiagm((X[2:I])) zeros(I-1,1)] + [zeros(I-1,1) spdiagm((Z[1:I-1])); zeros(1,I)]
+     B = (ρ + 1/Δ)*speye(I) - A
+
+     b = u + V/Δ
+     V = B\b
+     V_change = V-v
+     v= V
 
 	push!(dist,findmax(abs(V_change))[1])
 	if dist[n] .< ε
@@ -117,14 +128,9 @@ png("c(a)_vs_a")
 
 # approximation at the borrowing constraint
 a_dot = w+ r.*a -c
-u_1 = (w+r*a_min)^(-σ)
-u_2 = -σ*(w+r*a_min)^(-σ-1)
-ν = sqrt(-2*(ρ-r)*u_1/u_2)
-s_approx = -ν*(a-a_min).^(1/2)
 
 plot(a, a_dot, grid=false,
 		xlabel="a", ylabel="s(a)",
 		xlims=(a_min,a_max), title="", label="s(a)", legend=:bottomleft)
-plot!(a, s_approx, label="Approximation of s(a)", line=:dash)
 plot!(a, zeros(I,1), label="")
 png("stateconstraint")
