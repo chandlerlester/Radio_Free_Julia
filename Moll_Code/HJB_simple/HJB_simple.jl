@@ -44,9 +44,7 @@ for n=1:maxit
 
 	# backward difference
 	dVb[2:I] = (V[2:I]-V[1:I-1])/da
-	dVb[1] = (w+r.*a_min).^(-σ) # the boundary condition
-
-	I_concave = dVb .> dVf
+	dVb[1] = (w+r.*a_min).^(-σ) # the boundary condition here we impose v'(a) = u'(c(a)) at the boundary 
 
 	c = dVb.^(-1/σ)
 	V_change = c.^(1-σ)/(1-σ) + dVb.*(w +r.*a -c) -ρ.*V
