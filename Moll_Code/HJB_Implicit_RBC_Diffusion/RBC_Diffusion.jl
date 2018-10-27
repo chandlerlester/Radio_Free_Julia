@@ -96,10 +96,19 @@ Vaf, Vab, Vzf, Vzb, Vzz, c = [zeros(I,J) for i in 1:6]
 
 #==============================================================================
 
-    Now we are going to construct a matrix summarizing the evolution of z
+    Now we are going to construct a matrix summarizing the evolution of V_z
 
-    This matrix is the analog to the transition matrix for a
-        markov process
+    This comes from the following discretized Bellman equation:
+
+    ρv_ij = u(c_ij) + v_k(zF(k_{i}) -δk-c) + v_z⋅μ(z)
+                                   + 1/2(v_{zz})σ^2(z)
+
+                                   or
+
+    ρv_ij = u(c_ij) + v_k(zF(k_{i}) -δk-c) + ((v_{i,j+1}-v_{i,j})/Δz)μ(z)
+                            + 1/2((v_{i,j+1}-2v_{i,j}+v_{ij-1})/Δz^2)σ^2(z)
+
+    Assume forward difference because of boundary conditions
 
 ==============================================================================#
 
