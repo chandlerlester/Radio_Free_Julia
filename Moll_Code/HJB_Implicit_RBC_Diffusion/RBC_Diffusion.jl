@@ -4,42 +4,36 @@
 
 	Translated Julia code from Matlab code by Ben Moll:
         http://www.princeton.edu/~moll/HACTproject.htm
+
+        Updated to Julia 1.0.0
 ==============================================================================#
 
-using Parameters, Distributions, Plots
+using Parameters, Distributions, Plots, SparseArrays, LinearAlgebra
 
-@with_kw type RBC_Model_parameters
-    γ= 2.0 #gamma parameter for CRRA utility
-    ρ = 0.05 #the discount rate
-    α = 0.3 # the curvature of the production function (cobb-douglas)
-    δ = 0.05 # the depreciation rate
-end
+
+γ= 2.0 #gamma parameter for CRRA utility
+ρ = 0.05 #the discount rate
+α = 0.3 # the curvature of the production function (cobb-douglas)
+δ = 0.05 # the depreciation rate
 
 
 # Z our state variable follows this process
-@with_kw type Ornstein_Uhlenbeck_parameters
-	#= for this process:
-	 		dlog(z) = -θ⋅log(z)dt + σ^2⋅dw
-		and
-			log(z)∼N(0,var) where var = σ^2/(2⋅θ) =#
-    var = 0.07
-	μ_z = exp(var/2)
-	corr = 0.9
-	θ = -log(corr)
-	σ_sq = 2*θ*var
+#= for this process:
+ 		dlog(z) = -θ⋅log(z)dt + σ^2⋅dw
+	and
+		log(z)∼N(0,var) where var = σ^2/(2⋅θ) =#
+var = 0.07
+μ_z = exp(var/2)
+corr = 0.9
+θ = -log(corr)
+σ_sq = 2*θ*var
 
-end
 
-RBC_param = RBC_Model_parameters()
-OU_param = Ornstein_Uhlenbeck_parameters()
-
-@unpack_RBC_Model_parameters(RBC_param)
-@unpack_Ornstein_Uhlenbeck_parameters(OU_param)
 
 #=============================================================================
  	k our capital follows a process that depends on z,
 
-	using the regular formulan for capital accumulation
+	using the regular formula for capital accumulation
 	we would have:
 		(1+ρ)k_{t+1} = k_{t}⋅f'(k_{t}) + (1-δ)k_{t}
 	where:
@@ -54,17 +48,17 @@ OU_param = Ornstein_Uhlenbeck_parameters()
 k_st = ((α⋅μ_z)/(ρ+δ))^(1/(1-α))
 
 # create the grid for k
-I = 100 #number of points on grid
+H = 100 #number of points on grid
 k_min = 0.3*k_st # min value
 k_max = 3*k_st # max value
-k = linspace(k_min, k_max, I)
-dk = (k_max-k_min)/(I-1)
+k = LinRange(k_min, k_max, H)
+dk = (k_max-k_min)/(H-1)
 
 # create the grid for z
 J = 40
 z_min = μ_z*0.8
 z_max = μ_z*1.2
-z = linspace(z_min, z_max, J)
+z = LinRange(z_min, z_max, J)
 dz = (z_max-z_min)/(J-1)
 dz_sq = dz^2
 
@@ -75,16 +69,16 @@ y = pdf.(LogNormal(0, var), z)
 plot(z,y, grid=false,
 		xlabel="z", ylabel="Probability",
 		legend=false, color="purple", title="PDF of z")
-png("PDF of z")
+png("PDF_of_z")
 
 #create matrices for k and z
 z= convert(Array, z)'
 kk = k*ones(1,J)
-zz = ones(I,1)*z
+zz = ones(H,1)*z
 
 # use Ito's lemma to find the drift and variance of our optimization equation
 
-μ = (-θ*log(z)+σ_sq/2).*z # the drift from Ito's lemma
+μ = (-θ*log.(z).+σ_sq/2).*z # the drift from Ito's lemma
 Σ_sq = σ_sq.*z.^2 #the variance from Ito's lemma
 
 max_it = 100
@@ -92,7 +86,7 @@ max_it = 100
 Δ = 1000
 
 # set up all of these empty matrices
-Vaf, Vab, Vzf, Vzb, Vzz, c = [zeros(I,J) for i in 1:6]
+Vaf, Vab, Vzf, Vzb, Vzz = [zeros(H,J) for i in 1:6]
 
 #==============================================================================
 
@@ -117,31 +111,31 @@ Vaf, Vab, Vzf, Vzb, Vzz, c = [zeros(I,J) for i in 1:6]
  ζ = μ/dz + Σ_sq/(2*dz_sq)
 
 
- # Define the diagonals of this matrix
- updiag = zeros(I,1)
+ # Define the Diagonals of this matrix
+ updiag_z = zeros(H,1)
  	for j = 1:J
-		updiag =[updiag; repmat([ζ[j]], I, 1)]
+		global updiag_z =[updiag_z; repeat([ζ[j]], H, 1)]
 	end
- updiag =(updiag[:])
+ updiag_z =(updiag_z[:])
 
 
- centerdiag=repmat([χ[1]+yy[1]],I,1)
+ centerdiag_z=repeat([χ[1]+yy[1]],H,1)
 	for j = 2:J-1
-		centerdiag = [centerdiag; repmat([yy[j]], I, 1)]
+		global centerdiag_z = [centerdiag_z; repeat([yy[j]], H, 1)]
 	end
- centerdiag=[centerdiag; repmat([yy[J]+ζ[J]], I, 1)]
- centerdiag = centerdiag[:]
+ centerdiag_z=[centerdiag_z; repeat([yy[J]+ζ[J]], H, 1)]
+  centerdiag_z = centerdiag_z[:]
 
-lowdiag = repmat([χ[2]], I, 1)
+lowdiag_z = repeat([χ[2]], H, 1)
 	for j=3:J
-		lowdiag = [lowdiag; repmat([χ[j]],I,1)]
+		global lowdiag_z = [lowdiag_z; repeat([χ[j]],H,1)]
 	end
-lowdiag=lowdiag[:]
+lowdiag_z=lowdiag_z[:]
 
 # spdiags in Matlab allows for automatic trimming/adding of zeros
     # spdiagm does not do this
 
-B_switch = spdiagm(centerdiag)+ [zeros(I,I*J);  spdiagm(lowdiag) zeros(I*(J-1), I)]+ spdiagm(updiag)[(I+1):end,1:(I*J)] # trim off rows of zeros
+B_switch = sparse(Diagonal(centerdiag_z))+ [zeros(H,H*J);  sparse(Diagonal(lowdiag_z)) zeros(H*(J-1), H)]+ sparse(Diagonal(updiag_z))[(H+1):end,1:(H*J)] # trim off rows of zeros
 
 
 # Now it's time to solve the model, first put in a guess for the value function
@@ -156,12 +150,12 @@ for n = 1:maxit
 
     #Now set up the forward difference
 
-    Vaf[1:I-1,:] = (V[2:I, :] - V[1:I-1,:])/dk
-    Vaf[I,:] = (z.*k_max.^α - δ.*k_max).^(-γ) # imposes a constraint
+    Vaf[1:H-1,:] = (V[2:H, :] - V[1:H-1,:])/dk
+    Vaf[H,:] = (z.*k_max.^α .- δ.*k_max).^(-γ) # imposes a constraint
 
     #backward difference
-    Vab[2:I,:] = (V[2:I, :] - V[1:I-1,:])/dk
-    Vab[1,:] = (z.*k_min.^α - δ.*k_min).^(-γ)
+    Vab[2:H,:] = (V[2:H, :] - V[1:H-1,:])/dk
+    Vab[1,:] = (z.*k_min.^α .- δ.*k_min).^(-γ)
 
     #I_concave = Vab .> Vaf # indicator for whether the value function is concave
 
@@ -183,56 +177,56 @@ for n = 1:maxit
 
     If = sf.>0 # positive drift will ⇒ forward difference
     Ib = sb.<0 # negative drift ⇒ backward difference
-    I0=(1-If-Ib) # at steady state
+    I0=(1.0.-If-Ib) # at steady state
 
     Va_upwind = Vaf.*If + Vab.*Ib + Va0.*I0 # need to include SS term
 
-    c = Va_upwind.^(-1/γ)
+    global c = Va_upwind.^(-1/γ)
     u = (c.^(1-γ))/(1-γ)
 
     # Now to constuct the A matrix
-    X = -min(sb, 0)/dk
+    X = -min.(sb, zeros(H,1))/dk
     #println(X)
-    Y = -max(sf, 0)/dk + min(sb, 0)/dk
-    Z = max(sf, 0)/dk
+    Y = -max.(sf, zeros(H,1))/dk + min.(sb, zeros(H,1))/dk
+    Z = max.(sf, zeros(H,1))/dk
 
     updiag = 0
        for j = 1:J
-           updiag =[updiag; Z[1:I-1,j]; 0]
+           updiag =[updiag; Z[1:H-1,j]; 0]
        end
     updiag =(updiag[:])
 
-    centerdiag=reshape(Y, I*J, 1)
+    centerdiag=reshape(Y, H*J, 1)
     centerdiag = (centerdiag[:]) # for tuples
 
-   lowdiag = X[2:I, 1]
+   lowdiag = X[2:H, 1]
        for j = 2:J
-           lowdiag = [lowdiag; 0; X[2:I,j]]
+           lowdiag = [lowdiag; 0; X[2:H,j]]
        end
    lowdiag=(lowdiag)
 
    # spdiags in Matlab allows for automatic trimming/adding of zeros
        # spdiagm does not do this
-  AA = spdiagm(centerdiag)+ [zeros(1, I*J); spdiagm(lowdiag) zeros(I*J-1,1)] + spdiagm(updiag)[2:end, 1:(I*J)] # trim first element
+  AA = sparse(Diagonal(centerdiag))+ [zeros(1, H*J); sparse(Diagonal(lowdiag)) zeros(H*J-1,1)] + sparse(Diagonal(updiag))[2:end, 1:(H*J)] # trim first element
 
   A = AA + B_switch
-  B = (1/Δ + ρ)*speye(I*J) - A
+  B = (1/Δ + ρ)*sparse(I, H*J, H*J) - A
 
-  u_stacked= reshape(u, I*J, 1)
-  V_stacked = reshape(V,I*J, 1)
+  u_stacked= reshape(u, H*J, 1)
+  V_stacked = reshape(V,H*J, 1)
 
   b = u_stacked + (V_stacked./Δ)
 
   V_stacked = B\b
 
-  V = reshape(V_stacked, I, J)
+  V = reshape(V_stacked, H, J)
 
   V_change = V-v
 
-  v= V
+  global v= V
 
   # need push function to add to an already existing array
-  push!(dist, findmax(abs(V_change))[1])
+  push!(dist, findmax(abs.(V_change))[1])
   if dist[n].< ε
       println("Value Function Converged Iteration=")
       println(n)
@@ -249,6 +243,6 @@ plot(k, ss, grid=false,
 		xlabel="k", ylabel="s(k,z)",
         xlims=(k_min,k_max),
 		legend=false, title="Optimal Savings Policies")
-plot!(k, zeros(I,1))
+plot!(k, zeros(H,1))
 
 png("OptimalSavings")
