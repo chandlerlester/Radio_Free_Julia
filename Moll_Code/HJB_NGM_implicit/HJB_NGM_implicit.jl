@@ -5,37 +5,36 @@
 
 	Translated Julia code from Matlab code by Ben Moll:
         http://www.princeton.edu/~moll/HACTproject.htm
+
+    Updated to Julia 1.0.0
 ==============================================================================#
 
-using Parameters, Distributions, Plots
+using Distributions, Plots, SparseArrays, LinearAlgebra
 
-@with_kw type Model_parameters
-    σ= 2.0 #
-    ρ = 0.05 #the discount rate
-    δ = 0.05 # the depreciation rate
-    A = 1.0
-    α= 0.3
-end
 
-param = Model_parameters()
-@unpack_Model_parameters(param)
+σ= 2.0 #
+ρ = 0.05 #the discount rate
+δ = 0.05 # the depreciation rate
+A = 1.0
+α= 0.3
+
 
 k_ss = (α*A/(ρ+δ))^(1/(1-α))
 
-I = 10000
+H = 10000
 k_min = 0.001*k_ss
 k_max = 2.0*k_ss
 
-k = linspace(k_min, k_max, I)
+k = LinRange(k_min, k_max, H)
 k = convert(Array, k) # create grid for a values
-dk = (k_max-k_min)/(I-1)
+dk = (k_max-k_min)/(H-1)
 
 Δ = 1000
 
 maxit = 10
 ε = 10e-6
 
-dVf, dVb, dV_Upwind, c, If, Ib = [zeros(I,1) for i in 1:6]
+dVf, dVb = [zeros(H,1) for i in 1:6]
 
 #initial guess for V
 v0 = (A.*k.^α).^(1-σ)/(1-σ)/ρ
@@ -47,11 +46,11 @@ for n=1:maxit
 	V=v
 
     # forward difference
-	dVf[1:I-1] = (V[2:I]-V[1:I-1])/dk
-	dVf[I] = (A.*k_max.^α - δ.*k_max)^(-σ)
+	dVf[1:H-1] = (V[2:H]-V[1:H-1])/dk
+	dVf[H] = (A.*k_max.^α - δ.*k_max)^(-σ)
 
 	# backward difference
-	dVb[2:I] = (V[2:I]-V[1:I-1])/dk
+	dVb[2:H] = (V[2:H]-V[1:H-1])/dk
 	dVb[1] = (A.*k_min.^α - δ.*k_min)^(-σ) # the boundary condition
 
 	I_concave = dVb .> dVf
@@ -70,28 +69,28 @@ for n=1:maxit
     # Now to make a choice between forward and backward difference
     If = μ_f .> 0
     Ib = μ_b .< 0
-    I0 = (1-If-Ib)
+    I0 = (1.0.-If-Ib)
 
-    dV_Upwind= dVf.*If + dVb.*Ib + dV0.*I0
+    global dV_Upwind= dVf.*If + dVb.*Ib + dV0.*I0
 
-    c = dV_Upwind.^(-1/σ)
+    global c = dV_Upwind.^(-1/σ)
     u = c.^(1-σ)/(1-σ)
 
     # create the transition matrix
-    X = -min(μ_b,0)/dk
-    Y = -max(μ_f,0)/dk + min(μ_b,0)/dk
-    Z = max(μ_f,0)/dk
+    X = -min.(μ_b,0)/dk
+    Y = -max.(μ_f,0)/dk + min.(μ_b,0)/dk
+    Z = max.(μ_f,0)/dk
 
 
-    AA = spdiagm((Y[:])) + [zeros(1,I); spdiagm((X[2:I])) zeros(I-1,1)] + [zeros(I-1,1) spdiagm((Z[1:I-1])); zeros(1,I)]
-    B = (ρ + 1/Δ)*speye(I) - AA
+    AA = sparse(Diagonal((Y[:]))) + [zeros(1,H); sparse(Diagonal((X[2:H]))) zeros(H-1,1)] + [zeros(H-1,1) sparse(Diagonal((Z[1:H-1]))); zeros(1,H)]
+    B = (ρ + 1/Δ)*sparse(I,H,H) - AA
     b = u + V./Δ
 
     V = B\b
     V_change = V-v
-    v= V
+    global v= V
 
-	push!(dist,findmax(abs(V_change))[1])
+	push!(dist,findmax(abs.(V_change))[1])
 	if dist[n] .< ε
 		println("Value Function Converged Iteration=")
 		println(n)
@@ -119,7 +118,7 @@ plot(k, v, grid=false,
 		xlabel="k", ylabel="V(k)",
 		xlims=(k_min,k_max),
 		legend=false, title="")
-png("Value_function_vs_a")
+png("Value_function_vs_k")
 
 plot(k, c, grid=false,
 		xlabel="k", ylabel="c(k)",
@@ -133,5 +132,5 @@ k_dot = (A.*k.^α - δ.*k -c)
 plot(k, k_dot, grid=false,
 		xlabel="k", ylabel="s(k)",
 		xlims=(k_min,k_max), title="", label="s(k)", legend=false)
-plot!(k, zeros(I,1), label="", line=:dash)
+plot!(k, zeros(H,1), label="", line=:dash)
 png("stateconstraint")

@@ -9,32 +9,27 @@
 
 using Parameters, Distributions, Plots
 
-@with_kw type Model_parameters
-    σ= 2.0 #
-    ρ = 0.05 #the discount rate
-    r = 0.045 # the depreciation rate
-	w = 0.1
-end
 
-param = Model_parameters()
-@unpack_Model_parameters(param)
+σ= 2.0 #
+ρ = 0.05 #the discount rate
+r = 0.045 # the depreciation rate
+w = 0.1
 
-
-I = 500
+H = 500
 a_min = -0.02
 a_max = 1.0
 
-a = linspace(a_min, a_max, I)
+a = LinRange(a_min, a_max, H)
 a = convert(Array, a) # create grid for a values
-da = (a_max-a_min)/(I-1)
+da = (a_max-a_min)/(H-1)
 
 maxit = 20000
 ε = 10e-6
 
-dVf, dVb, c = [zeros(I,1) for i =1:3] 
+dVf, dVb= [zeros(H,1) for i =1:2]
 
 #initial guess for V
-v0 = (w+r.*a).^(1-σ)/(1-σ)/ρ
+v0 = (w.+r.*a).^(1-σ)/(1-σ)/ρ
 v= v0
 
 dist=[]
@@ -42,44 +37,44 @@ dist=[]
 for n=1:maxit
 	V=v
     #forward difference
-    dVf[1:I-1] = (V[2:I]-V[1:I-1])/da;
-    dVf[I]= 0;
+    dVf[1:H-1] = (V[2:H]-V[1:H-1])/da;
+    dVf[H]= 0;
 
 	# backward difference
-	dVb[2:I] = (V[2:I]-V[1:I-1])/da
-	dVb[1] = (w+r.*a_min).^(-σ) # the boundary condition
+	dVb[2:H] = (V[2:H]-V[1:H-1])/da
+	dVb[1] = (w.+r.*a_min).^(-σ) # the boundary condition
 
 	I_concave = dVb .> dVf
 
     # consumption and savings with forward difference
     cf = dVf.^(-1/σ)
-    μ_f = w+r.*a-cf
+    μ_f = w.+r.*a-cf
 
     # consumption and savings with backward difference
 	cb = dVb.^(-1/σ)
-	μ_b = w+r.*a-cb
+	μ_b = w.+r.*a-cb
 
     # consumption and savings at steady state
-    c0=w+r.*a
+    c0=w.+r.*a
     dV0 =c0.^(-σ)
 
     #look at the sign of the drift
         #to choose forward or backward difference
     If = μ_f .> 0 # positive drift ⇒ forward difference
     Ib = μ_b .< 0  # negative drift ⇒ backward difference
-    I0 = (1-If-Ib)
+    I0 = (1.0.-If-Ib)
 
     dV_Upwind = dVf.*If + dVb.*Ib + dV0.*I0
 
-     c = dV_Upwind.^(-1/σ)
-     V_change = c.^(1-σ)/(1-σ) + dV_Upwind.*(w + r.*a - c) - ρ.*V
+     global c = dV_Upwind.^(-1/σ)
+     V_change = c.^(1-σ)/(1-σ) + dV_Upwind.*(w .+ r.*a - c) - ρ.*V
 
 
 	# update
-	Δ = .9*da/(findmax(w + r.*a)[1])
-	v = v + Δ*V_change
+	Δ = .9*da/(findmax(w .+ r.*a)[1])
+	global v = v + Δ*V_change
 
-	push!(dist,findmax(abs(V_change))[1])
+	push!(dist,findmax(abs.(V_change))[1])
 	if dist[n] .< ε
 		println("Value Function Converged Iteration=")
 		println(n)
@@ -94,7 +89,7 @@ plot(dist, grid=false,
 png("Convergence")
 
 
-v_err = c.^(1-σ)/(1-σ) + dVb.*(w + r.*a -c) - ρ.*v
+v_err = c.^(1-σ)/(1-σ) + dVb.*(w .+ r.*a -c) - ρ.*v
 
 plot(a, v_err, grid=false,
 		xlabel="k", ylabel="Error in the HJB equation",
@@ -116,15 +111,15 @@ plot(a, c, grid=false,
 png("c(a)_vs_a")
 
 # approximation at the borrowing constraint
-a_dot = w+ r.*a -c
-u_1 = (w+r*a_min)^(-σ)
-u_2 = -σ*(w+r*a_min)^(-σ-1)
+a_dot = w.+ r.*a -c
+u_1 = (w.+r*a_min)^(-σ)
+u_2 = -σ*(w.+r*a_min)^(-σ-1)
 ν = sqrt(-2*(ρ-r)*u_1/u_2)
-s_approx = -ν*(a-a_min).^(1/2)
+s_approx = -ν*(a.-a_min).^(1/2)
 
 plot(a, a_dot, grid=false,
 		xlabel="a", ylabel="s(a)",
 		xlims=(a_min,a_max), title="", label="s(a)", legend=:bottomleft)
 plot!(a, s_approx, label="Approximation of s(a)", line=:dash)
-plot!(a, zeros(I,1), label="")
+plot!(a, zeros(H,1), label="")
 png("stateconstraint")
