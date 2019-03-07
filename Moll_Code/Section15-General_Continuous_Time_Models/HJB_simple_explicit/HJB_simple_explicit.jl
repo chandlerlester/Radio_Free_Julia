@@ -7,7 +7,7 @@
         http://www.princeton.edu/~moll/HACTproject.htm
 ==============================================================================#
 
-using Parameters, Distributions, Plots
+using Distributions, Plots
 
 
 σ= 2.0 #

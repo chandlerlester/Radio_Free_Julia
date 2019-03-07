@@ -2,6 +2,10 @@
 
 	Steady state solution for an Aiyagari model with a diffusion process
 
+	Translated julia code based on code from Ben Moll's Website: 
+		http://www.princeton.edu/%7Emoll/HACTproject.htm
+
+
 ========================================================================#
 using LinearAlgebra, SparseArrays, PyPlot
 
