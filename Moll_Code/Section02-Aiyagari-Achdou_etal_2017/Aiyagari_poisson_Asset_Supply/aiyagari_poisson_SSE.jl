@@ -3,7 +3,7 @@
 	Steady state solution for an Aiyagari model with a diffusion process
 
 	Translated julia code based on code from Ben Moll's Website:
-		http://www.princeton.edu/%7Emoll/HACTproject.htm
+		http://www.princeton.edu/moll/HACTproject.htm
 
 		For Julia 1.0.0
 ========================================================================#
@@ -203,3 +203,4 @@ plot!(KD_new,rrr, label="\$F_{k}(K,1)-\\delta\$")
 plot!(zeros(Ir,1).+a_min,rrr,label="\$a=\\underline{a}\$",color=:yellow,line=:dash)
 plot!(aaa,ones(Ir,1).*ρ,label="\$r=\\rho\$",color=:purple,line=:dash)
 plot!(aaa,ones(Ir,1).*(-δ),label="\$r=-\\delta\$",color=:green, line=:dash)
+png("Asset_supply")
