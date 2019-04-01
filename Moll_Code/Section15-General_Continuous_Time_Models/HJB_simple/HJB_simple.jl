@@ -6,10 +6,10 @@
 	Translated Julia code from Matlab code by Ben Moll:
         http://www.princeton.edu/~moll/HACTproject.htm
 
-        Updated to Julia 1.0.0 
+        Updated to Julia 1.0.0
 ==============================================================================#
 
-using Parameters, Distributions, Plots
+using Distributions, Plots
 
 σ= 2.0 #
 ρ = 0.05 #the discount rate
@@ -21,7 +21,7 @@ a_min = -0.02
 a_max = 1.0
 
 a = LinRange(a_min, a_max, H)
-a = convert(Array, a) # create grid for a values
+a = convert(Array, a) # create grid for a value
 da = (a_max-a_min)/(H-1)
 
 maxit = 10000
@@ -29,7 +29,7 @@ maxit = 10000
 
 dVf, dVb = [zeros(H,1) for i =1:3]
 
-#initial guess for V
+#initial guess for V]]
 v0 = (w.+r.*a).^(1-σ)/(1-σ)/ρ
 v= v0
 

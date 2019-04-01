@@ -7,7 +7,7 @@
 
 		For Julia 1.0.0
 ========================================================================#
-using LinearAlgebra, SparseArrays, Plots 
+using LinearAlgebra, SparseArrays, Plots
 
 # Model parameters
 γ = 2 # CRRA utility
@@ -92,7 +92,7 @@ for ir in 1:Ir
 	push!(r_max_r, r_max )
 
 	push!(KD, (α*A_prod/(r+δ))^(1/(1-α))*z_ave)
-	w = (1-α)*A_prod*KD[ir].^α * z_ave^(-α)
+	global w = (1-α)*A_prod*KD[ir].^α * z_ave^(-α)
 
 	v0[:,1] = (w*z[1] .+ r.*a).^(1-γ)/(1-γ)/ρ
 	v0[:,2] = (w*z[2] .+ r.*a).^(1-γ)/(1-γ)/ρ
@@ -137,7 +137,7 @@ for ir in 1:Ir
 		#Now implement the upwind scheme
 		Va_Upwind = Vaf.*If + Vab.*Ib + Va0.*I0
 
-		c= Va_Upwind.^(-1/γ)
+		global c= Va_Upwind.^(-1/γ)
 		u = c.^(1-γ)/(1-γ)
 
 		X = -min.(sb,0)/da
@@ -212,3 +212,13 @@ for ir in 1:Ir
 end
 
 # Graphs
+
+amax1=5
+amin1=a_min-.1
+plot(a, adot[end][:,1], label="\$s_{1}(a)\$", legend=:topright,
+	xlims=(amin1,amax1), ylims=(-0.03,0.05),color=:blue,
+	ylabel="Savings", xlabel="Wealth")
+plot!(a,adot[end][:,2], label="\$s_{2}(a)\$", color=:red)
+plot!(LinRange(amin1,amax1,H),zeros(H,1), label="",line=:dash, color=:black)
+plot!(zeros(H,1),LinRange(-0.03,0.05,H), label="",line=:dash, color=:black)
+png("savings_plot")
