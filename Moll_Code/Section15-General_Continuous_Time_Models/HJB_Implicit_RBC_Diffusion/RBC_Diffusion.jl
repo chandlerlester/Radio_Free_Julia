@@ -8,7 +8,7 @@
         Updated to Julia 1.0.0
 ==============================================================================#
 
-using Parameters, Distributions, Plots, SparseArrays, LinearAlgebra
+using Distributions, Plots, SparseArrays, LinearAlgebra
 
 
 γ= 2.0 #gamma parameter for CRRA utility
