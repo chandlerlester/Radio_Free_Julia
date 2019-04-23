@@ -1,5 +1,5 @@
 # Radio Free Julia
-I take Matlab code from well known Economists and rewrite it in Julia (v.0.6.0) 
+I take Matlab code from well known Economists and rewrite it in Julia (v.1.0.0) 
 
 I started this project based on my interests in continuous time models. 
 
