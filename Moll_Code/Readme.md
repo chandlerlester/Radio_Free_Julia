@@ -7,11 +7,14 @@
 ### Section 1 Hugget Model  
 - HJB_stateconstraint_explicit.m = HJB_stateconstraint_explicit.jl 
 - HJB_stateconstraint_implicit.m = HJB_stateconstraint_implicit.jl
-- hugget_partialeq.m = hugget_partialeq.jl
-- hugget_asset_supply.m = hugget_asset_supply.jl
-- hugget_equilibrium_iterate.m = hugget_equilibrium_iterate.jl 
+- huggett_partialeq.m = huggett_partialeq.jl
+- huggett_asset_supply.m = huggett_asset_supply.jl
+- huggett_equilibrium_iterate.m = huggett_equilibrium_iterate.jl 
 - Transition Dynamics 
-  + hugget_terminal.m = Hugget_SSE.jl
+  + huggett_terminal.m = Huggett_terminal.jl
+  + huggett_initial.m = Huggett_initial.jl
+  + huggett_transition.m = Huggett_transition.jl (simple updating method) 
+  
 
 ### Section 2 Aiyagari Model 
 - aiyagari_poisson_steadystate.m = aiyagari_poisson_SSE.jl
