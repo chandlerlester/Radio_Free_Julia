@@ -8,8 +8,8 @@
 ===============================================================================#
 
 #Need to figure out best way to transfer inputs in julia
-include("Hugget_inital.jl")
-include("Hugget_terminal.jl")
+include("Huggett_initial.jl")
+include("Huggett_terminal.jl")
 
 # Get values for g, r, A from initial
 g0, gg0, r, A = initial_val()
