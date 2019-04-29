@@ -37,8 +37,6 @@ r0 = r_st*ones(N,1)
 
 # Set up space to save variables
 S = zeros(N,1)
-global SS = zeros(N,1)
-global dS = zeros(N,1)
 
 v = zeros(H,2,N)
 
@@ -126,11 +124,15 @@ for it in 1:maxit
     gg[1,:,:] = gg0
 
     #loop for KFE, solve forward
+    global SS = zeros(N,1)
+    global dS = zeros(N,1)
+
     for q in 1:N
+        global SS, dS = SS, dS
         AT=A_t[end-(q-1)]' #the indexing is backward from original code.
         gg[q+1,:,:] = (sparse(I,2*H,2*H)-AT*dt)\gg[q,:,:]
-        SS[q] = (gg[q,:,:]'*aa[:].*da)[1]
-        dS[q] = (gg[q+1,:,:]'*aa[:]*da - gg[q,:,:]'*aa[:]*da)[1]
+        global SS[q] = (gg[q,:,:]'*aa[:].*da)[1]
+        global dS[q] = (gg[q+1,:,:]'*aa[:]*da - gg[q,:,:]'*aa[:]*da)[1]
     end
 
     push!(dS_it,dS)
@@ -149,9 +151,9 @@ end
 
 plot(Sdist[:])
 
-# This graph is not right, but somehow the other ones are? Scoping issue?
-#plot(1:N, SS_it[1], ylabel="Excess Supply", xlabel="Excess Demand", label="First iteration" )
-#plot!(1:N, SS_it[end], label="Last Iternation")
+# Correct graph, previously had some scoping issues with Julia
+plot(1:N, SS_it[1], ylabel="Excess Supply", xlabel="Excess Demand", label="First iteration" )
+plot!(1:N, SS_it[end], label="Last Iternation")
 
 plot(r_t[:], legend=false, xlabel="Period", ylabel="r")
 plot!(1:N, r_st.*ones(N,1), line=:dash)
