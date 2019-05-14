@@ -16,14 +16,15 @@
   + huggett_transition.m = Huggett_transition.jl (simple updating method) 
   + huggett_newton.m = Huggett_newton.jl (Newtonian Method)
   + huggett_subroutine.m = Huggett_subroutine.jl (subroutine for the Newtonian method) 
+- HJB_diffusion_implicit.m = HJB_diffusion_implicit.jl 
+- huggett_diffusion_partialeq.m = Huggett_diffusion_partialeq.jl
   
-
 ### Section 2 Aiyagari Model 
 - aiyagari_poisson_steadystate.m = aiyagari_poisson_SSE.jl
 - aiyagari_poisson_asset_supply.m = Aiyagari_poisson_Asset_Supply/aiyagari_poisson_SSE.jl
 - aiygari_diffusion_equilibrium.m = aiyagari_diffusion_SSE.jl
 
-### Section 15 Additional Codes 
+### Section 16 Additional Codes 
 - HJB_simple.m = HJB_simple.jl 
 - HJB_no_uncertainty_explicit.m = HJB_simple_explicit.jl 
 - HJB_no_uncertainty_implicit.m = HJB_simple_implicit.jl 
