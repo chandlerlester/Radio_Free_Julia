@@ -14,6 +14,8 @@
   + huggett_terminal.m = Huggett_terminal.jl
   + huggett_initial.m = Huggett_initial.jl
   + huggett_transition.m = Huggett_transition.jl (simple updating method) 
+  + huggett_newton.m = Huggett_newton.jl (Newtonian Method)
+  + huggett_subroutine.m = Huggett_subroutine.jl (subroutine for the Newtonian method) 
   
 
 ### Section 2 Aiyagari Model 
