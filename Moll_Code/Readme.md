@@ -24,6 +24,9 @@
 - aiyagari_poisson_asset_supply.m = Aiyagari_poisson_Asset_Supply/aiyagari_poisson_SSE.jl
 - aiygari_diffusion_equilibrium.m = aiyagari_diffusion_SSE.jl
 
+### Section 3 Lifecycle Model
+- lifecycle.m = lifecycle.jl
+
 ### Section 16 Additional Codes 
 - HJB_simple.m = HJB_simple.jl 
 - HJB_no_uncertainty_explicit.m = HJB_simple_explicit.jl 
