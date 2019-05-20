@@ -22,6 +22,7 @@
 ### Section 2 Aiyagari Model 
 - aiyagari_poisson_steadystate.m = aiyagari_poisson_SSE.jl
 - aiyagari_poisson_asset_supply.m = Aiyagari_poisson_Asset_Supply/aiyagari_poisson_SSE.jl
+- aiyagari_poisson_MITshock.m = aiyagari_poisson_MITshock.jl
 - aiygari_diffusion_equilibrium.m = aiyagari_diffusion_SSE.jl
 
 ### Section 3 Lifecycle Model
